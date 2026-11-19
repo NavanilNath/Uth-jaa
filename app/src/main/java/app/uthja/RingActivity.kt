@@ -6,7 +6,23 @@ import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.compose.setContent
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
+import androidx.activity.SystemBarStyle
+import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -42,6 +58,10 @@ import java.time.format.DateTimeFormatter
 class RingActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        enableEdgeToEdge(
+            statusBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT),
+            navigationBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT),
+        )
         super.onCreate(savedInstanceState)
         if (Build.VERSION.SDK_INT >= 27) {
             setShowWhenLocked(true)
@@ -86,6 +106,19 @@ fun RingScreen(plan: List<ChallengeType>, onDone: () -> Unit) {
         while (true) { clock = LocalTime.now(); delay(1000) }
     }
 
+    // Background pulses between night and an angry sunrise.
+    val pulse by rememberInfiniteTransition(label = "pulse").animateFloat(
+        initialValue = 0f, targetValue = 1f,
+        animationSpec = infiniteRepeatable(tween(900), RepeatMode.Reverse), label = "pulse",
+    )
+    val bg = Brush.verticalGradient(
+        listOf(
+            lerp(UJ.Indigo, Color(0xFF6A1236), pulse),
+            lerp(UJ.Plum, UJ.Rose, pulse),
+            lerp(UJ.Rose, UJ.Orange, pulse),
+        )
+    )
+
     val next: () -> Unit = {
         if (!finished) {
             if (round + 1 >= plan.size) { finished = true; onDone() } else round++
@@ -96,26 +129,45 @@ fun RingScreen(plan: List<ChallengeType>, onDone: () -> Unit) {
     Column(
         Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
+            .background(bg)
+            .systemBarsPadding()
             .imePadding()
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 24.dp, vertical = 32.dp),
+            .padding(horizontal = 20.dp, vertical = 20.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
+        Text("UTH JA!", color = UJ.Gold, fontWeight = FontWeight.ExtraBold, fontSize = 18.sp, letterSpacing = 6.sp)
         Text(
-            clock.format(DateTimeFormatter.ofPattern("h:mm a")),
-            fontSize = 56.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary,
+            clock.format(DateTimeFormatter.ofPattern("h:mm")),
+            fontSize = 88.sp, fontWeight = FontWeight.ExtraBold, color = Color.White, lineHeight = 92.sp,
         )
-        Text("UTH JA! Solve to stop the alarm.", color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Spacer(Modifier.height(20.dp))
-        Text(
-            if (emergency) "🚨 Emergency exit: 20 in a row"
-            else "Round ${round + 1} of ${plan.size} · ${type.emoji} ${type.title}",
-            fontSize = 20.sp, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center,
-        )
-        Spacer(Modifier.height(24.dp))
+        Text("Solve to stop the alarm", color = Color.White.copy(alpha = 0.85f), fontSize = 16.sp)
+        Spacer(Modifier.height(18.dp))
 
-        Box(Modifier.fillMaxWidth()) {
+        if (!emergency) {
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                plan.forEachIndexed { i, t ->
+                    val bgc = when {
+                        i < round -> UJ.Good
+                        i == round -> Color.White
+                        else -> Color.Black.copy(alpha = 0.25f)
+                    }
+                    Box(
+                        Modifier.size(46.dp).clip(CircleShape).background(bgc),
+                        contentAlignment = Alignment.Center,
+                    ) { Text(if (i < round) "✓" else t.emoji, fontSize = 20.sp, color = UJ.Night, fontWeight = FontWeight.ExtraBold) }
+                }
+            }
+            Spacer(Modifier.height(18.dp))
+        }
+
+        GlassCard(Modifier.fillMaxWidth(), color = UJ.Night.copy(alpha = 0.88f)) {
+            Text(
+                if (emergency) "🚨 Emergency exit" else "Round ${round + 1} of ${plan.size} · ${type.title}",
+                color = UJ.Gold, fontWeight = FontWeight.Bold, fontSize = 18.sp,
+                modifier = Modifier.align(Alignment.CenterHorizontally),
+            )
+            Spacer(Modifier.height(14.dp))
             if (emergency) {
                 MathChallenge(target = 20) { if (!finished) { finished = true; onDone() } }
             } else {
@@ -130,10 +182,10 @@ fun RingScreen(plan: List<ChallengeType>, onDone: () -> Unit) {
             }
         }
 
-        Spacer(Modifier.height(32.dp))
+        Spacer(Modifier.height(20.dp))
         if (!emergency) {
             TextButton(onClick = { emergency = true }) {
-                Text("Stuck? Emergency exit (20 math problems in a row)", textAlign = TextAlign.Center)
+                Text("Stuck? Emergency exit · 20 math problems in a row", color = Color.White.copy(alpha = 0.75f), textAlign = TextAlign.Center)
             }
         }
     }

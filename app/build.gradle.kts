@@ -12,8 +12,8 @@ android {
         applicationId = "app.uthja"
         minSdk = 26
         targetSdk = 34
-        versionCode = 1
-        versionName = "0.1"
+        versionCode = 2
+        versionName = "0.2"
     }
 
     // Fixed key so every new build installs as an update over the old one.

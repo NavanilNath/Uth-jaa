@@ -4,16 +4,27 @@ import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.Button
-import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -90,8 +101,8 @@ fun MathChallenge(target: Int, onSolved: () -> Unit) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-        Text("Get $target right in a row · $streak/$target", color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Text(problem.text, fontSize = 44.sp, fontWeight = FontWeight.Bold)
+        Text("Get $target right in a row · $streak/$target", color = UJ.Muted)
+        Text(problem.text, fontSize = 48.sp, fontWeight = FontWeight.ExtraBold, color = UJ.Text)
         OutlinedTextField(
             value = answer,
             onValueChange = { answer = it.filter(Char::isDigit).take(6) },
@@ -99,9 +110,10 @@ fun MathChallenge(target: Int, onSolved: () -> Unit) {
             singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
         )
-        Button(
+        GradientButton(
+            text = "Submit",
             onClick = {
-                if (done) return@Button
+                if (done) return@GradientButton
                 if (answer.toIntOrNull() == problem.answer) {
                     streak++
                     msg = "✅ Correct"
@@ -114,8 +126,8 @@ fun MathChallenge(target: Int, onSolved: () -> Unit) {
                 answer = ""
             },
             enabled = answer.isNotEmpty(),
-        ) { Text("Submit") }
-        Text(msg)
+        )
+        Feedback(msg)
     }
 }
 
@@ -178,12 +190,11 @@ fun QuizChallenge(target: Int, onSolved: () -> Unit) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        Text("Get $target right in a row · $streak/$target", color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Text(question.q, fontSize = 24.sp, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center)
-        options.forEach { opt ->
-            OutlinedButton(
-                onClick = {
-                    if (done) return@OutlinedButton
+        Text("Get $target right in a row · $streak/$target", color = UJ.Muted)
+        Text(question.q, fontSize = 24.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, lineHeight = 30.sp)
+        options.forEachIndexed { i, opt ->
+            OptionRow(letter = "ABCD"[i].toString(), text = opt) {
+                    if (done) return@OptionRow
                     if (opt == question.answer) {
                         streak++
                         msg = "✅ Correct"
@@ -193,11 +204,9 @@ fun QuizChallenge(target: Int, onSolved: () -> Unit) {
                         streak = 0
                     }
                     index++
-                },
-                modifier = Modifier.fillMaxWidth(),
-            ) { Text(opt, fontSize = 17.sp) }
+            }
         }
-        Text(msg)
+        Feedback(msg)
     }
 }
 
@@ -241,13 +250,22 @@ fun ShakeChallenge(target: Int, onSolved: () -> Unit) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        Text("Get out of bed and dance!", fontSize = 24.sp, fontWeight = FontWeight.SemiBold)
-        Text("Hold the phone and shake it hard with every move.", color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
-        Text("$count / $target", fontSize = 60.sp, fontWeight = FontWeight.Bold)
-        LinearProgressIndicator(
-            progress = { (count.toFloat() / target).coerceAtMost(1f) },
-            modifier = Modifier.fillMaxWidth().height(10.dp),
-        )
+        Text("Get out of bed and dance! 💃", fontSize = 24.sp, fontWeight = FontWeight.Bold)
+        Text("Hold the phone and shake it hard with every move.", color = UJ.Muted, textAlign = TextAlign.Center)
+        Box(Modifier.size(200.dp), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator(
+                progress = { (count.toFloat() / target).coerceAtMost(1f) },
+                modifier = Modifier.fillMaxSize(),
+                color = UJ.Orange,
+                trackColor = UJ.CardHi,
+                strokeWidth = 16.dp,
+                strokeCap = StrokeCap.Round,
+            )
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text("$count", fontSize = 64.sp, fontWeight = FontWeight.ExtraBold, lineHeight = 66.sp)
+                Text("of $target moves", color = UJ.Muted)
+            }
+        }
     }
 }
 
@@ -275,11 +293,23 @@ fun MemoryChallenge(target: Int, digits: Int = 6, onSolved: () -> Unit) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-        Text("Memorise the number · $streak/$target", color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Text(
-            if (showing) number else "• ".repeat(digits).trim(),
-            fontSize = 48.sp, fontWeight = FontWeight.Bold, letterSpacing = 4.sp,
-        )
+        Text("Memorise the number · $streak/$target", color = UJ.Muted)
+        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            number.forEach { d ->
+                Box(
+                    Modifier.size(width = 40.dp, height = 54.dp).clip(RoundedCornerShape(12.dp))
+                        .background(if (showing) UJ.CardHi else UJ.Card)
+                        .border(1.dp, if (showing) UJ.Orange else UJ.Border, RoundedCornerShape(12.dp)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        if (showing) d.toString() else "?",
+                        fontSize = 30.sp, fontWeight = FontWeight.ExtraBold,
+                        color = if (showing) UJ.Gold else UJ.Muted,
+                    )
+                }
+            }
+        }
         if (!showing) {
             OutlinedTextField(
                 value = answer,
@@ -288,13 +318,14 @@ fun MemoryChallenge(target: Int, digits: Int = 6, onSolved: () -> Unit) {
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             )
-            Button(
+            GradientButton(
+                text = "Submit",
                 onClick = {
-                    if (done) return@Button
+                    if (done) return@GradientButton
                     if (answer == number) {
                         streak++
                         msg = "✅ Correct"
-                        if (streak >= target) { done = true; onSolved(); return@Button }
+                        if (streak >= target) { done = true; onSolved(); return@GradientButton }
                     } else {
                         msg = "❌ It was $number. Streak reset."
                         streak = 0
@@ -304,10 +335,27 @@ fun MemoryChallenge(target: Int, digits: Int = 6, onSolved: () -> Unit) {
                     attempt++
                 },
                 enabled = answer.length == digits,
-            ) { Text("Submit") }
+            )
         } else {
-            Text("Look carefully… 3 seconds", modifier = Modifier.padding(top = 8.dp))
+            Text("Look carefully… 3 seconds", color = UJ.Muted, modifier = Modifier.padding(top = 8.dp))
         }
-        Text(msg)
+        Feedback(msg)
+    }
+}
+
+@Composable
+fun OptionRow(letter: String, text: String, onClick: () -> Unit) {
+    val shape = RoundedCornerShape(18.dp)
+    Row(
+        Modifier.fillMaxWidth().clip(shape).background(UJ.CardHi).border(1.dp, UJ.Border, shape)
+            .clickable(onClick = onClick).padding(horizontal = 14.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            Modifier.size(32.dp).clip(CircleShape).background(UJ.sunrise),
+            contentAlignment = Alignment.Center,
+        ) { Text(letter, color = Color(0xFF1A0E08), fontWeight = FontWeight.ExtraBold) }
+        Spacer(Modifier.width(12.dp))
+        Text(text, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
     }
 }
